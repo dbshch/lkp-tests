@@ -21,27 +21,30 @@ build()
 	# apt-get install libglu1-mesa-dev python3-dev
 
 	local ncpu=$(nproc)
+	local wayland=1
 
-	cd ../waffle
+	[ "$distro" = "centos" ] && wayland=0
+	cd ../waffle || return
 	cmake	-Dwaffle_has_glx=1	\
 		-Dwaffle_has_x11_egl=1	\
-		-Dwaffle_has_wayland=1	\
+		-Dwaffle_has_wayland=$wayland	\
 		-Dwaffle_has_gbm=1	\
-		-DCMAKE_INSTALL_PREFIX=/usr
-	make
-	make install
-	find_delete_files
+		-DCMAKE_INSTALL_PREFIX=/usr || return
+	make || return
+	make install || return
+	find_delete_files || return
 
-	cd ../$BM_NAME
-	cmake -DCMAKE_INSTALL_PREFIX=$BM_ROOT
-	make
-	make install
-	find_delete_files
+	cd ../$BM_NAME || return
+	cmake -DCMAKE_INSTALL_PREFIX=$BM_ROOT || return
+	make || return
+	make install || return
+	find_delete_files || return
 
 
-	cd ../intel-gpu-tools
-	./autogen.sh
-	make
+	cd ../intel-gpu-tools || return
+	[ "$distro" = "centos" ] && local opts="--disable-amdgpu"
+	./autogen.sh $opts || return
+	make || return
 	find_delete_files
 }
 

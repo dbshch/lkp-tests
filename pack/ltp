@@ -2,7 +2,9 @@
 
 download()
 {
-	git_clone_update https://git.centos.org/r/rpms/rusers.git || return
+	[ "$distro" != "centos" ] && {
+		git_clone_update https://git.centos.org/r/rpms/rusers.git || return
+	}
 	git_clone_update https://github.com/PeterHuewe/tpm-emulator.git || return
 	git_clone_update https://github.com/ianw/numactl.git || return
 	git_clone_update https://github.com/linux-test-project/ltp.git
@@ -28,6 +30,20 @@ split_syscalls()
 	done
 
 	echo "Splitting syscalls to syscalls_part1, ..., syscalls_part$i"
+}
+
+rearrange_dio()
+{
+	cd ./runtest || return
+	[ -f "dio" ] || return
+
+	sed -e "s/^#.*//g" dio | awk '{if (length !=0) print $0}' >> diocase || return
+	sed -n "1,20p" diocase >> dio-00 || return
+	sed -n "21,25p" diocase >> dio-01 || return
+	sed -n "26,28p" diocase >> dio-02 || return
+	sed -n "29,\$p" diocase >> dio-03 || return
+	rm diocase || return
+	cd ..
 }
 
 patch_source()
@@ -83,13 +99,11 @@ build_ltp()
 	patch -p1 < $LKP_SRC/pack/ltp-addon/v2-0001-shmctl-enable-subtest-SHM_LOCK-SHM_UNLOCK-only-if.patch || return
 	# fix ltplite:rwtest01-04
 	patch -p1 < $LKP_SRC/pack/ltp-addon/0001-Specify-TMPDIR-for-rwtest01-04.patch || return
-	# fix ltplite:brk01
-	patch -p1 < $LKP_SRC/pack/ltp-addon/0001-syscalls-brk-change-to-unsigned-long-for-incr.patch || return
-	patch -p1 < $LKP_SRC/pack/ltp-addon/0002-syscalls-brk-limit-the-largest-requesting-memory.patch || return
 	# fix commond:ar01
 	patch -p1 < $LKP_SRC/pack/ltp-addon/ar_fail.patch || return
 
 	split_syscalls
+	rearrange_dio || return
 	make autotools
 	./configure --prefix=$BM_ROOT
 	make
@@ -141,8 +155,11 @@ build()
 	cd ../numactl || exit
 	build_numactl || exit
 
-	cd ../rusers || exit
-	build_rusers || exit
+	[ "$distro" != "centos" ] && {
+		cd ../rusers || exit
+		build_rusers || exit
+	}
+	return 0
 }
 
 install()
@@ -156,8 +173,11 @@ install()
 	cd ../numactl || exit
 	install_numactl || exit
 
-	cd ../rusers || exit
-	install_rusers || exit
+	[ "$distro" != "centos" ] && {
+		cd ../rusers || exit
+		install_rusers || exit
+	}
+	return 0
 }
 
 strip_object_files()

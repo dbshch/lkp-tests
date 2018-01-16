@@ -278,15 +278,15 @@ class MResultRootTableSet
      'xfstests', 'chromeswap', 'fio-basic', 'apachebench', 'perf_event_tests', 'swapin',
      'tpcc', 'mytest', 'exit_free', 'pgbench', 'boot_trace', 'sysbench-cpu',
      'sysbench-memory', 'sysbench-threads', 'sysbench-mutex', 'stream',
-     'perf-bench-futex', 'mutilate', 'lmbench3', 'libMicro'].freeze
+     'perf-bench-futex', 'mutilate', 'lmbench3', 'libMicro', 'schbench'].freeze
   LINUX_TESTCASES =
     ['analyze_suspend', 'boot', 'cpu-hotplug', 'ext4-frags', 'ftq', 'ftrace_onoff', 'fwq',
      'galileo', 'irda-kernel', 'kernel_selftests', 'kvm-unit-tests', 'kvm-unit-tests-qemu',
-     'locktorture', 'mce-test', 'otc_ddt', 'piglit', 'pm-qa', 'nvml-unit-tests',
+     'leaking_addresses', 'locktorture', 'mce-test', 'otc_ddt', 'piglit', 'pm-qa', 'nvml-unit-tests',
      'qemu', 'rcutorture', 'suspend', 'suspend_stress', 'trinity', 'ndctl', 'nfs-test', 'hwsim', 'idle-inject',
      'mdadm-selftests', 'xsave-test', 'nvml', 'test_bpf', 'mce-log', 'perf-sanity-tests',
      'update-ucode', 'reboot', 'cat', 'libhugetlbfs-test', 'ocfs2test', 'syzkaller',
-     'perf_test', 'stress-ng', 'sof_test', 'fxmark', 'kvm-kernel-boot-test', 'bkc_ddt'].freeze
+     'perf_test', 'stress-ng', 'sof_test', 'fxmark', 'kvm-kernel-boot-test', 'bkc_ddt', 'bpf_offload'].freeze
   OTHER_TESTCASES =
     ['0day-boot-tests', '0day-kbuild-tests', 'build-dpdk', 'build-sof', 'sof_test', 'build-nvml',
      'build-qemu', 'convert-lkpdoc-to-html', 'convert-lkpdoc-to-html-css',
