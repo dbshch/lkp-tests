@@ -24,9 +24,11 @@ check_ignored_cases()
 		cat runtest/$test | awk '{print $1}' | grep -G "$regex" | awk -v prefix=$test":" '$0=prefix$0' >> ./ignored_by_lkp
 	done
 
-	for i in $(cat ./ignored_by_lkp | grep -v '^#' | grep -w ^$test | awk -F: 'NF == 2')
+	orig_test=$(echo "$test" | sed 's/-[0-9]\{2\}$//')
+	for i in $(cat ./ignored_by_lkp | grep -v '^#' | grep -w ^$orig_test | awk -F: 'NF == 2')
 	do
 		ignore=$(echo $i | awk -F: '{print $2}')
+		grep -q "^${ignore}" runtest/${test} || continue
 		sed -i "s/^${ignore}/#${ignore}/g" runtest/${test}
 		echo "<<<test_start>>>"
 		echo "tag=${ignore}"
@@ -89,7 +91,7 @@ recover_configfile()
 workaround_env
 
 case "$test" in
-admin_tools)
+admin_tools-0*)
 	# set TMP=/tmp for new user
 	echo "TMP=/tmp" >> /etc/skel/.profile
 	# the cron.allow in debian is "/etc/cron.allow", same as redhat
@@ -174,7 +176,7 @@ syscalls_part4)
 	[ -e /dev/log ] && rm /dev/log
 	ln -s /run/systemd/journal/dev-log /dev/log
 	;;
-ltplite)
+ltplite-0*)
 	specify_tmpdir || exit
 	[ "$fs" = "ext4" ] && tune2fs -O ^dir_nlink $ltp_partition
 	;;
