@@ -72,15 +72,25 @@ set_env()
 		log_eval export SCRATCH_LOGDEV="$SCRATCH_LOGDEV"1
 	}
 
+	[ "$test" = "xfs-437" ] && {
+		echo "LC_ALL=en_US.UTF-8" >> /etc/environment
+		echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+		echo "LANG=en_US.UTF-8" > /etc/locale.conf
+		locale-gen en_US.UTF-8
+		log_eval export WORKAREA="$BENCHMARK_ROOT/xfstests/xfsprogs-dev"
+	}
+
 	[ "$test" = "xfs-external" ] && {
 		log_eval export USE_EXTERNAL="yes"
 		log_eval export SCRATCH_RTDEV="$SCRATCH_LOGDEV"
 		log_eval export MKFS_OPTIONS="-mreflink=1"
 		log_eval unset SCRATCH_LOGDEV
 	}
+	[ "$test" = "xfs-reflink_rmapbt" ] && log_eval export MKFS_OPTIONS="\"-mreflink=1 -mrmapbt=1\""
 	[ "$test" = "xfs-reflink" ] && log_eval export MKFS_OPTIONS="-mreflink=1"
 	[ "$test" = "xfs-rmapbt" ] && log_eval export MKFS_OPTIONS="-mrmapbt=1"
 	[ "$test" = "xfs-244" ] && log_eval export MKFS_OPTIONS="-mcrc=0"
+	[ "$test" = "xfs-132" ] && (mkfs.xfs -f -mreflink=1 $TEST_DEV || die "mkfs.xfs test_dev failed")
 }
 
 ignore_and_do_tests()

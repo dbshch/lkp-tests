@@ -42,6 +42,7 @@ check_ignore_case()
 prepare_for_net()
 {
 	ulimit -l 10240
+	modprobe fou
 }
 
 prepare_for_efivarfs()
@@ -134,4 +135,13 @@ prepare_for_bpf()
 {
 	make -C ../../../tools/bpf || return
 	make install -C ../../../tools/bpf || return
+}
+
+prepare_for_selftest()
+{
+        if [ "$test"="kselftests-00" ]; then
+                selftest=a-s
+        elif [ "$test"="kselftests-01" ]; then
+                selftest=t-z
+        fi
 }

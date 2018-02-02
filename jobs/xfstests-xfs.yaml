@@ -12,8 +12,11 @@ xfstests:
   - xfs-external
   - xfs-rmapbt
   - xfs-reflink
+  - xfs-reflink_rmapbt
+  - xfs-132
   - xfs-244
   - xfs-275
+  - xfs-437
   - xfs-slow1
   - xfs-slow2
   - xfs-mid1
