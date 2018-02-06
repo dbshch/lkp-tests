@@ -2,6 +2,8 @@ suite: stress-ng
 testcase: stress-ng
 category: benchmark
 
+nr_threads: 100%
+
 testtime:
 - 60s
 - 1s
@@ -14,11 +16,26 @@ stress-ng:
   - filesystem
   - interrupts
   - io
-  - memory
   - network
-  - os
   - pipe
   - scheduler
   - security 
+
+---
+testtime:
+- 1s
+
+stress-ng:
+  class:
+  - os
   - vm
 
+---
+nr_threads: 75%
+
+testtime:
+- 5s
+
+stress-ng:
+  class:
+  - memory
