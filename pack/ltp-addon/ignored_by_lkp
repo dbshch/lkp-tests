@@ -100,3 +100,11 @@ ltp-aiodio.part4:DOR000
 ltp-aiodio.part4:DOR001
 ltp-aiodio.part4:DOR002
 ltp-aiodio.part4:DOR003
+# need two physical machine as server and client
+net.tirpc_tests:tirpc_rpc_broadcast
+net.tirpc_tests:tirpc_rpc_broadcast_exp
+# need keyserv
+net.tirpc_tests:tirpc_authdes_create
+net.tirpc_tests:tirpc_authdes_seccreate
+# bug in ltp
+net.rpc_tests:rpc_clnt_broadcast

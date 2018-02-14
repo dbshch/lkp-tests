@@ -149,6 +149,15 @@ fixup_jgfxbat()
 	export DISPLAY=:0
 }
 
+fixup_systester()
+{
+	local target=${environment_directory}/../test-profiles/pts/systester-1.0.0/results-definition.xml
+	[ -f $target.bak ] || cp $target $target.bak
+	sed -i '/LineBeforeHint/d' $target
+	export TOTAL_LOOP_TIME=1
+	export TOTAL_LOOP_COUNT=1
+}
+
 run_test()
 {
 	local test=$1
@@ -156,10 +165,11 @@ run_test()
 		systester-[0-9]*)
 			# Choose
 			# 1: Gauss-Legendre algorithm [Recommended.]
-			# 2: 16 Million Digits [This Test could take a while to finish.]
+			# 1: 4 Million Digits [This Test could take a while to finish.]
 			# 3: 4 threads [2+ Cores Recommended]
 			# todo: select different test according to testbox's hardware
-			test_opt="\n1\n2\n3\nn"
+			fixup_systester
+			test_opt="\n1\n1\n3\nn"
 			;;
 		iozone-1.9.0)
 			# Choose
