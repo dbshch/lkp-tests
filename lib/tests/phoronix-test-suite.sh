@@ -6,7 +6,8 @@
 fixup_ffmpeg()
 {
 	[[ -n "$environment_directory" ]] || return
-	local target=${environment_directory}/pts/ffmpeg-2.5.0/ffmpeg
+	local test=$1
+	local target=${environment_directory}/pts/${test}/ffmpeg
 	if [[ -z $(grep -w 'NUM_CPU_CORES=64' $target) ]]; then
 		sed "2a[ \$NUM_CPU_CORES -gt 64 ] && export NUM_CPU_CORES=64" -i "$target"
 	fi
@@ -16,7 +17,8 @@ fixup_ffmpeg()
 fixup_open_porous_media()
 {
 	[[ -n "$environment_directory" ]] || return
-	local target=${environment_directory}/pts/open-porous-media-1.3.1/open-porous-media
+	local test=$1
+	local target=${environment_directory}/pts/${test}/open-porous-media
 	sed -i 's/nice mpirun -np/nice mpirun --allow-run-as-root -np/' "$target"
 }
 
@@ -26,16 +28,19 @@ fixup_hpcc()
 {
 	[[ -n "$environment_directory" ]] || return
 
-	[ -d "/usr/lib/x86_64-linux-gnu/openmpi" ] && {
-		export MPI_PATH=/usr/lib/x86_64-linux-gnu/openmpi
-		export MPI_INCLUDE=/usr/lib/x86_64-linux-gnu/openmpi/include
-		export MPI_LIBS=/usr/lib/x86_64-linux-gnu/openmpi/lib/libmpi.so
+	local test=$1
+	local mpdir="/usr/lib/x86_64-linux-gnu/openmpi"
+	# check mpdir in Make file to make sure the test binary is built with right library
+	[ -d "$mpdir" ] && [ "$(grep MPdir ${environment_directory}/pts/${test}/hpcc-*/hpl/Make.pts | awk '{print $NF}')" != "$mpdir" ] && {
+		export MPI_PATH=$mpdir
+		export MPI_INCLUDE=$mpdir/include
+		export MPI_LIBS=$mpdir/lib/libmpi.so
 		export MPI_CC=/usr/bin/mpicc.openmpi
 		export MPI_VERSION=`$MPI_CC -showme:version 2>&1 | grep MPI | cut -d "(" -f1  | cut -d ":" -f2`
-		phoronix-test-suite force-install pts/hpcc-1.2.1
+		phoronix-test-suite force-install pts/$test
 	}
 
-	local target=${environment_directory}/pts/hpcc-1.2.1/hpcc
+	local target=${environment_directory}/pts/${test}/hpcc
 	sed -i 's/mpirun -np/mpirun --allow-run-as-root -np/' "$target"
 }
 
@@ -43,7 +48,8 @@ fixup_hpcc()
 fixup_lammps()
 {
 	[[ -n "$environment_directory" ]] || return
-	local target=${environment_directory}/pts/lammps-1.0.1/lammps
+	local test=$1
+	local target=${environment_directory}/pts/${test}/lammps
 	sed -i 's/mpirun -np/mpirun --allow-run-as-root -np/' "$target"
 }
 
@@ -51,7 +57,8 @@ fixup_lammps()
 fixup_npb()
 {
 	[[ -n "$environment_directory" ]] || return
-	local target=${environment_directory}/pts/npb-1.2.4/npb
+	local test=$1
+	local target=${environment_directory}/pts/${test}/npb
 	sed -i 's/mpiexec -np/mpiexec --allow-run-as-root -np/' "$target"
 }
 
@@ -59,8 +66,9 @@ fixup_npb()
 fixup_nginx()
 {
 	[[ -n "$environment_directory" ]] || return
+	local test=$1
 	sed -i 's/^::1/#::1/' /etc/hosts
-	${environment_directory}/pts/nginx-1.1.0/nginx_/sbin/nginx
+	${environment_directory}/pts/${test}/nginx_/sbin/nginx
 	sleep 5
 }
 
@@ -68,12 +76,19 @@ fixup_nginx()
 fixup_fio()
 {
 	[[ -n "$environment_directory" ]] || return
-	mount_partition || die "mount partition failed"
-	mount --bind $mnt ${environment_directory}/pts/fio-1.8.2/ || die "failed to mount fio directory"
+	local test=$1
+	local target=${environment_directory}/pts/${test}/fio-run
 
-	phoronix-test-suite force-install pts/fio-1.8.2
-	local target=${environment_directory}/pts/fio-1.8.2/fio-run
+	# create virtual disk
+	local test_disk="/tmp/test_fio.img"
+	local test_dir="/media/test_fio"
+	fallocate -l 100M $test_disk || return
+	mkfs -t ext4 $test_disk || return
+	mkdir $test_dir || return
+	mount -t auto -o loop $test_disk $test_dir ||return
+
 	sed -i 's,#!/bin/sh,#!/bin/dash,' "$target"
+	sed -i "s#\$DIRECTORY_TO_TEST#directory=${test_dir}#" "$target"
 
 	# Choose
 	# 1: Sequential Write
@@ -90,8 +105,8 @@ fixup_fio()
 fixup_bullet()
 {
 	[[ -n "$environment_directory" ]] || return
-	phoronix-test-suite force-install pts/bullet-1.2.2
-	local target=${environment_directory}/pts/bullet-1.2.2/bullet
+	local test=$1
+	local target=${environment_directory}/pts/${test}/bullet
 	sed -i 's,#!/bin/sh,#!/bin/dash,' "$target"
 }
 
@@ -99,14 +114,16 @@ fixup_bullet()
 fixup_crafty()
 {
 	[[ -n "$environment_directory" ]] || return
-	local target=${environment_directory}/pts/crafty-1.3.1/crafty
+	local test=$1
+	local target=${environment_directory}/pts/${test}/crafty
 	sed -i 's,crafty $@,crafty bookpath=/usr/share/crafty/ $@,' "$target"
 }
 
 fixup_unvanquished()
 {
 	[[ -n "$environment_directory" ]] || return
-	local target=${environment_directory}/pts/unvanquished-1.5.0/unvanquished-game
+	local test=$1
+	local target=${environment_directory}/pts/${test}/unvanquished-game
 	[ -f $target/lib64/librt.so.1 ] && rm $target/lib64/librt.so.1
 	[ -f $target/lib64/libdrm.so.2 ] && rm $target/lib64/libdrm.so.2
 	[ -f $target/lib64/libstdc++.so.6 ] && rm $target/lib64/libstdc++.so.6
@@ -117,7 +134,8 @@ fixup_unvanquished()
 fixup_gluxmark()
 {
 	[[ -n "$environment_directory" ]] || return
-	local target=${environment_directory}/pts/gluxmark-1.1.1
+	local test=$1
+	local target=${environment_directory}/pts/$test
 	export LD_LIBRARY_PATH=${target}/gluxMark2.2_src/libs
 	export MESA_GL_VERSION_OVERRIDE=3.0
 	export DISPLAY=:0
@@ -131,27 +149,34 @@ fixup_gluxmark()
 fixup_jgfxbat()
 {
 	[[ -n "$environment_directory" ]] || return
-	local target=${environment_directory}/pts/jgfxbat-1.1.0
+	local test=$1
+	local target=${environment_directory}/pts/$test
 
 	# fix the result format
 	sed -i s/PASS/" Result: 1"/ $target/jgfxbat
 	sed -i s/FAIL/" Result: 0"/ $target/jgfxbat
-	local results_definition=${environment_directory}/../test-profiles/pts/jgfxbat-1.1.0/results-definition.xml
+	local results_definition=${environment_directory}/../test-profiles/pts/${test}/results-definition.xml
 	[[ -f "$results_definition" ]] || return
 	sed -i s/"#_RESULT_#"/"Result: #_RESULT_#"/ $results_definition
 
-	# fix the Jaca2Demo test
-	sed -i '/run_Java2Demo()/asleep 10' $target/runbat.sh
+	# disable the Jaca2Demo test due to unstable
+	sed -i 's/^run_Java2Demo$/#run_Java2Demo/' $target/runbat.sh
 
 	# select the java version
-	update-java-alternatives -s java-1.6.0-openjdk-amd64
+	# drop debug message to avoid unexpected stderr
+	update-java-alternatives -s java-1.6.0-openjdk-amd64 &>/dev/null || {
+		echo "failed to update-java-alternatives -s java-1.6.0-openjdk-amd64"
+		return 1
+	}
 
 	export DISPLAY=:0
 }
 
 fixup_systester()
 {
-	local target=${environment_directory}/../test-profiles/pts/systester-1.0.0/results-definition.xml
+	[[ -n "$environment_directory" ]] || return
+	local test=$1
+	local target=${environment_directory}/../test-profiles/pts/${test}/results-definition.xml
 	[ -f $target.bak ] || cp $target $target.bak
 	sed -i '/LineBeforeHint/d' $target
 	export TOTAL_LOOP_TIME=1
@@ -168,30 +193,30 @@ run_test()
 			# 1: 4 Million Digits [This Test could take a while to finish.]
 			# 3: 4 threads [2+ Cores Recommended]
 			# todo: select different test according to testbox's hardware
-			fixup_systester
+			fixup_systester $test || die "failed to fixup test systester"
 			test_opt="\n1\n1\n3\nn"
 			;;
-		iozone-1.9.0)
+		iozone-*)
 			# Choose
 			# 1: 1MB
 			# 2: 2GB
 			# 3: Test All Options
 			test_opt="\n3\n2\n3\nn"
 			;;
-		ut2004-demo-1.2.0)
+		ut2004-demo-*)
 			# Choose
 			# 1: ONS-Torlan Botmatch
 			# 2: 800 x 600
 			test_opt="\n6\n1\nn"
 			export DISPLAY=:0
 			;;
-		urbanterror-1.2.1)
+		urbanterror-*)
 			# Choose
 			# 1: 800 x 600
 			test_opt="\n1\nn"
 			export DISPLAY=:0
 			;;
-		nexuiz-1.6.1)
+		nexuiz-*)
 			# Choose
 			# 1: 800 x 600
 			# 2: Test All Options
@@ -199,55 +224,55 @@ run_test()
 			test_opt="\n1\n3\n3\nn"
 			export DISPLAY=:0
 			;;
-		video-cpu-usage-1.2.1)
+		video-cpu-usage-*)
 			# Choose
 			# 1: OS X CoreVideo
 			test_opt="\n5\na\nb\nc\nn"
 			export DISPLAY=:0
 			;;
-		nginx-1.1.0)
-			fixup_nginx || die "failed to fixup test nginx"
+		nginx-*)
+			fixup_nginx $test || die "failed to fixup test nginx"
                         ;;
-		ffmpeg-2.5.0)
-			fixup_ffmpeg || die "failed to fixup test ffmpeg"
+		ffmpeg-*)
+			fixup_ffmpeg $test || die "failed to fixup test ffmpeg"
 			;;
-		lammps-1.0.1)
-			fixup_lammps || die "failed to fixup test lammps"
+		lammps-*)
+			fixup_lammps $test || die "failed to fixup test lammps"
 			;;
-		npb-1.2.4)
-			fixup_npb || die "failed to fixup test npb"
+		npb-*)
+			fixup_npb $test || die "failed to fixup test npb"
 			;;
-		bullet-1.2.2)
-			fixup_bullet || die "failed to fixup test bullet"
+		bullet-*)
+			fixup_bullet $test || die "failed to fixup test bullet"
 			;;
-		fio-1.8.2)
-			fixup_fio || die "failed to fixup test fio"
+		fio-*)
+			fixup_fio $test || die "failed to fixup test fio"
 			;;
-		hpcc-1.2.1)
-			fixup_hpcc || die "failed to fixup test hpcc"
+		hpcc-*)
+			fixup_hpcc $test || die "failed to fixup test hpcc"
 			;;
-		open-porous-media-1.3.1)
-			fixup_open_porous_media || die "failed to fixup test open-porous-media"
+		open-porous-media-*)
+			fixup_open_porous_media $test || die "failed to fixup test open-porous-media"
 			;;
-		crafty-1.3.1)
-			fixup_crafty || die "failed to fixup crafty"
+		crafty-*)
+			fixup_crafty $test || die "failed to fixup crafty"
 			;;
-		unvanquished-1.5.0)
-			fixup_unvanquished || die "failed to fixup unvanquished"
+		unvanquished-*)
+			fixup_unvanquished $test || die "failed to fixup unvanquished"
 			;;
-		gluxmark-1.1.1)
-			fixup_gluxmark || die "failed to fixup gluxmark"
+		gluxmark-*)
+			fixup_gluxmark $test || die "failed to fixup gluxmark"
 			;;
-		jgfxbat-1.1.0)
-			fixup_jgfxbat || die "failed to fixup jgfxbat"
+		jgfxbat-*)
+			fixup_jgfxbat $test || die "failed to fixup jgfxbat"
 			;;
-		unigine-heaven-1.6.2|unigine-valley-1.1.4)
+		unigine-heaven-*|unigine-valley-*)
 			export DISPLAY=:0
 			# resolutino: 800X600
 			# full screen
 			test_opt="\n1\n1\nn"
 			;;
-		glmark2-1.1.0|openarena-1.5.3|gputest-1.3.1|supertuxkart-1.3.0|tesseract-1.1.0)
+		glmark2-*|openarena-*|gputest-*|supertuxkart-*|tesseract-*)
 			export DISPLAY=:0
 			;;
 	esac

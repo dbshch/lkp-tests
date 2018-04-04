@@ -196,6 +196,7 @@ setup_hosts()
 		cp /etc/hosts $tmpfs_hosts
 	fi
 	echo "127.0.0.1 $HOSTNAME.sh.intel.com  $HOSTNAME" >> $tmpfs_hosts
+	echo "::1 $HOSTNAME.sh.intel.com  $HOSTNAME" >> $tmpfs_hosts
 	ln -fs $tmpfs_hosts /etc/hosts
 }
 
@@ -381,6 +382,9 @@ tbox_use_lkp_ipxe()
 	[ "${HOSTNAME#*lkp-ivb-toshiba1}"       != "$HOSTNAME" ] && return 0
 	[ "${HOSTNAME#*lkp-bxtm-lenovo1}"       != "$HOSTNAME" ] && return 0
 	[ "${HOSTNAME#*lkp-bytm-lenovo1}"       != "$HOSTNAME" ] && return 0
+	[ "${HOSTNAME#*lkp-bdw-nuc1}"       != "$HOSTNAME" ] && return 0
+	[ "${HOSTNAME#*lkp-skl-nuc1}"       != "$HOSTNAME" ] && return 0
+	[ "${HOSTNAME#*lkp-bdwu-lenovo1}"       != "$HOSTNAME" ] && return 0
 	[ "${HOSTNAME#*lkp-kbl-lenovo1}"        != "$HOSTNAME" ] && return 0
 	[ "${HOSTNAME#*lkp-skl-d01}"    != "$HOSTNAME" ] && return 0
 	return 1
@@ -396,6 +400,8 @@ tbox_use_lkp_grub()
 	[ "${HOSTNAME#*lkp-cfl-s01}"    != "$HOSTNAME" ] && return 0
 	[ "${HOSTNAME#*lkp-sklu-lenovo1}"       != "$HOSTNAME" ] && return 0
 	[ "${HOSTNAME#*lkp-bdwy-lenovo1}"       != "$HOSTNAME" ] && return 0
+	# lkp-kblr-hp1 has PXE, but has UEFI BIOS Only
+	[ "${HOSTNAME#*lkp-kblr-hp1}"       != "$HOSTNAME" ] && return 0
 	return 1
 }
 

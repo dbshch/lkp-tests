@@ -18,6 +18,10 @@ prepare_for_test()
 	command -v gcc-5 >/dev/null && log_cmd ln -sf /usr/bin/gcc-5 /usr/bin/gcc
 	# fix cc: command not found
 	command -v cc >/dev/null || log_cmd ln -sf /usr/bin/gcc /usr/bin/cc
+	# fix bpf: /bin/sh: clang: command not found
+	# fix bpf: /bin/sh: line 2: llc: command not found
+	command -v clang >/dev/null || log_cmd ln -sf /usr/bin/clang-7 /usr/bin/clang
+	command -v llc >/dev/null || log_cmd ln -sf /usr/bin/llc-7 /usr/bin/llc
 }
 
 check_makefile()
@@ -67,10 +71,13 @@ prepare_for_efivarfs()
 
 prepare_for_pstore()
 {
-	[[ ! -e /dev/pmsg0 ]] && { 
+	[[ -e /dev/pmsg0 ]] || {
 		# in order to create a /dev/pmsg0, we insert a dummy ramoops device
-		modprobe ramoops mem_address=0x8000000 ecc=1 mem_size=1000000 2>&1
-		[[ ! -e /dev/pmsg0 ]] && {
+		# Previously, the expected device(/dev/pmsg0) isn't created on skylake(Sandy Bridge is fine) when we specify ecc=1
+		# So we chagne ecc=0 instead, that's good to both skylake and sand bridge.
+		# NOTE: the root cause is not clear
+		modprobe ramoops mem_address=0x8000000 ecc=0 mem_size=1000000 2>&1
+		[[ -e /dev/pmsg0 ]] || {
 			echo "ignored_by_lkp pstore test: /dev/pmsg0 does not exist"
 			return 1
 		}
@@ -176,4 +183,20 @@ fixup_vm()
 	}
 
 	sed -i 's/.\/compaction_test/echo [ignored_by_lkp] #.\/compaction_test/' vm/run_vmtests
+}
+
+platform_is_skylake()
+{
+	# FIXME: Model number: snb: 42, ivb: 58, haswell: 60, skl: [85, 94]
+	local model=$(lscpu | grep 'Model:' | awk '{print $2}')
+	[[ -z "$model" ]] && die "FIXME: unknown platform cpu model number"
+	[[ $model -ge 85 ]] && [[ $model -le 94 ]]
+}
+
+fixup_breakpoints()
+{
+	platform_is_skylake && grep -qw step_after_suspend_test breakpoints/Makefile && {
+		sed -i 's/step_after_suspend_test//' breakpoints/Makefile
+		echo "ignored_by_lkp breakpoints.step_after_suspend_test test"
+	}
 }

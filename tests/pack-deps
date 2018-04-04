@@ -1,5 +1,4 @@
 #!/bin/bash
-# - rootfs
 # - benchmark
 
 . $LKP_SRC/lib/debug.sh
@@ -8,6 +7,7 @@
 [ -n "$benchmark" ] || die "benchmark is empty"
 
 DISTRO=${rootfs%%-*}
+DISTRO=${DISTRO##*/}
 
 . $LKP_SRC/distro/${DISTRO}
 
@@ -17,7 +17,7 @@ mount $LKP_SERVER:$DEPS_MNT $DEPS_MNT || die "Failed to run mount"
 
 umask 002
 
-pack_to=$DEPS_MNT/$rootfs
+pack_to=$DEPS_MNT/$(basename $rootfs)
 [[ -d "$pack_to" ]] || {
 	mkdir "$pack_to"
 	chown .lkp "$pack_to"
@@ -31,7 +31,13 @@ add_jessie_mirror()
 	echo "deb http://linux-ftp.sh.intel.com/pub/mirrors/debian jessie main" >> /etc/apt/sources.list
 }
 
-[ "$DISTRO" = "debian" ] && add_jessie_mirror
+[ "$DISTRO" = "debian" ] && {
+	add_jessie_mirror
+	# fix the problem:
+	# debconf: unable to initialize frontend: Dialog
+	# debconf: (TERM is not set, so the dialog frontend is not usable.)
+	export DEBIAN_FRONTEND=noninteractive
+}
 
 update
 
@@ -43,18 +49,23 @@ for BM_NAME in $benchmark
 do
 	check_shared_package $BM_NAME
 
-	packages=$(get_dependency_packages $DISTRO $BM_NAME)
-	apt-get --simulate --no-install-recommends install $packages || die "Failed to apt-get install $packages"
+	packages=$(echo $(get_dependency_packages $DISTRO $BM_NAME))
+
+	command="apt-get --simulate --no-install-recommends install $packages"
+	# using "bash -c" to support wildcard in apt-get.
+	# if use wildcard in the package version variable,
+	# apt-get will treat the wildcard as a normal character.
+	bash -c "$command" || die "Failed to apt-get install $packages"
 	# apt-get will have below output
 	#   Inst python-minimal [2.7.11-2] (2.7.13-2 Debian:testing, Debian:unstable [amd64])
 	#   Inst mime-support (3.60 Debian:testing, Debian:unstable [all])
 	#   Inst libsqlite3-0 (3.16.2-3 Debian:testing, Debian:unstable [amd64])
 	# PACKAGE_LIST='python-minimal mime-support libsqlite3-0' 
-	PACKAGE_LIST=$(apt-get --simulate --no-install-recommends install $packages |
+	PACKAGE_LIST=$(bash -c "$command" |
 			awk '/^Inst / { print $2 }')
 
 	# PACKAGE_VERSION_LIST='python-minimal=2.7.13-2 mime-support=3.60 libsqlite3-0=3.16.2-3'
-	PACKAGE_VERSION_LIST=$(apt-get --simulate --no-install-recommends install $packages |
+	PACKAGE_VERSION_LIST=$(bash -c "$command" |
 			awk '/^Inst / { if (substr($3, 1, 1) != "[") { print $2$3 } else { print $2$4 } }' | tr '(' '=')
 
 	echo "original package list for $BM_NAME:" $packages
@@ -74,6 +85,11 @@ do
 	#   gawk
 	echo "$PACKAGE_LIST" | grep -F -f "$LKP_SRC/distro/keep-deb" > opt/deb/sequence-deb.$BM_NAME
 	echo "$PACKAGE_VERSION_LIST" > opt/deb/${BM_NAME}-deps.packages
+
+	# Fix the warning 'W: Download is performed unsandboxed as root as file...' in newest APT versions
+	if id "_apt" >/dev/null 2>&1; then
+		chown _apt .
+	fi
 
 	if download "$PACKAGE_VERSION_LIST"; then
 		install || exit 1
