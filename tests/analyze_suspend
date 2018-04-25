@@ -45,7 +45,7 @@ esac
 
 ftrace_mem=$(($total_mem - $process_mem - $result_mem))
 
-cat $option | grep "\-f" > /dev/null
+echo $option | grep "\-f" > /dev/null
 if [ $? -eq 0 ]
 then
 	fmem=$((500 * 1024))
@@ -54,6 +54,8 @@ else
 fi
 
 [ $ftrace_mem -gt $fmem ] && ftrace_mem=$fmem
+# in case we get negative value for ftrace_mem
+[ $ftrace_mem -lt 0 ] && ftrace_mem=$fmem
 
 options="$options -bufsize $ftrace_mem"
 ################################################################################

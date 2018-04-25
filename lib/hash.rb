@@ -97,7 +97,7 @@ def revise_hash(original, revisions, overwrite_top_keys = true)
         end
     if k[-1] == '-'
       kk = k[0..-2]
-      parent, pkey, hash, key, keys = lookup_hash(original, kk)
+      parent, pkey, hash, key, _keys = lookup_hash(original, kk)
       if hash.include? key
         if v
           keys = if v.is_a? Hash
@@ -124,11 +124,9 @@ def revise_hash(original, revisions, overwrite_top_keys = true)
 
     _parent, _pkey, hash, key, _keys = lookup_hash(original, k, true)
     hash[key] = v if overwrite_top_keys || hash.object_id != original.object_id || hash[key].nil?
-    if hash.object_id != original.object_id
-      next false
-    else
-      next true
-    end
+    next false if hash.object_id != original.object_id
+
+    true
   end
 
   all_keys.each { |k| original.delete k }

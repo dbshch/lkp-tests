@@ -14,12 +14,12 @@ require "#{LKP_SRC}/lib/log"
 # How many components in the stat sort key
 $stat_sort_key_number = {
   'perf-profile' => 2,
-  'latency_stats' => 2,
+  'latency_stats' => 2
 }
 
 $stat_absolute_changes = [
   /^perf-profile/,
-  /%$/,
+  /%$/
 ]
 
 class AxesGrouper
@@ -251,7 +251,7 @@ module Compare
         group_by_stat: @group_by_stat,
         show_empty_group: @show_empty_group,
         compact_show: @compact_show,
-        sort_by_group: @sort_by_group,
+        sort_by_group: @sort_by_group
       }
     end
 
@@ -313,9 +313,9 @@ module Compare
       m0 = ms[0]
       ms.drop(1).each do |m|
         changes = _get_changed_stats(m, m0,
-                                       'gap' => @comparer.gap,
-                                       'more' => @comparer.more_stats,
-                                       'perf-profile' => @comparer.perf_profile_threshold)
+                                     'gap' => @comparer.gap,
+                                     'more' => @comparer.more_stats,
+                                     'perf-profile' => @comparer.perf_profile_threshold)
         changed_stat_keys |= changes.keys if changes
       end
       changed_stat_keys
@@ -445,7 +445,7 @@ module Compare
         comparer: @comparer.to_data,
         axes: @axes,
         mresult_roots: @mresult_roots.map { |_rt| _rt.to_data },
-        compare_axeses: @compare_axeses,
+        compare_axeses: @compare_axeses
       }
     end
 
@@ -715,13 +715,13 @@ module Compare
     end
     all_tests_set.each do |test|
       c = stat_base_map[test]
-      stat_base_map[test] = 0 if c && c > 0
+      stat_base_map[test] = 0 if c && c.positive?
     end
     stats.sort_by! do |stat|
       [
         stat_base_map[stat[STAT_BASE]],
         stat_sort_key(stat[STAT_KEY], stat[STAT_BASE]),
-        stat[CHANGES],
+        stat[CHANGES]
       ]
     end
     stats.each
@@ -985,7 +985,7 @@ module Compare
 
   def self.parse_argv(argv)
     options = {
-      compare_axis_keys: [COMMIT_AXIS_KEY],
+      compare_axis_keys: [COMMIT_AXIS_KEY]
     }
     msearch_axes = []
     job_dir = nil

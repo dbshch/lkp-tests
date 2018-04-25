@@ -40,7 +40,7 @@ end
 
 def add_performance_per_watt(stats, matrix)
   watt = stats['pmeter.Average_Active_Power']
-  return unless watt && watt > 0
+  return unless watt && watt.positive?
 
   kpi_stats = load_yaml("#{LKP_SRC}/etc/index-perf.yaml")
   return unless kpi_stats
@@ -53,14 +53,14 @@ def add_performance_per_watt(stats, matrix)
 
     value = stats[stat]
     next unless value
-    if weight < 0
+    if weight.negative?
       value = 1 / value
       weight = -weight
     end
     performance += value * weight
   end
 
-  return unless performance > 0
+  return unless performance.positive?
 
   stats['pmeter.performance_per_watt'] = performance / watt
   matrix['pmeter.performance_per_watt'] = [performance / watt]
@@ -121,7 +121,7 @@ def create_stats_matrix(result_root)
   add_performance_per_watt(stats, matrix)
   add_path_length(stats, matrix)
   save_json(stats, result_root + '/stats.json')
-  save_json(matrix, result_root + '/matrix.json', compress = true)
+  save_json(matrix, result_root + '/matrix.json', true)
   if local_run?
     save_matrix_to_csv_file(result_root + '/stats.csv', stats)
     save_matrix_to_csv_file(result_root + '/matrix.csv', matrix)
@@ -190,7 +190,7 @@ def unite_to(stats, matrix_root, max_cols = nil, delete = false)
   matrix_file = matrix_root + '/matrix.json'
 
   matrix = load_matrix_file(matrix_root + '/matrix.json')
-  matrix = load_matrix_file(matrix_root + '/matrix.yaml') unless matrix
+  matrix ||= load_matrix_file(matrix_root + '/matrix.yaml')
 
   if matrix
     dup_col = matrix[STATS_SOURCE_KEY].index stats[STATS_SOURCE_KEY]
@@ -244,7 +244,7 @@ def merge_matrixes(matrixes)
   mresult
 end
 
-def check_warn_test_error(matrix, result_root)
+def check_warn_test_error(matrix, _result_root)
   ids = %w(
       last_state.is_incomplete_run
       last_state.exit_fail
@@ -326,7 +326,7 @@ def unite_params(result_root)
   job = Job.new
   begin
     job.load(result_root + '/job.yaml')
-  rescue
+  rescue StandardError
     return
   end
 
@@ -365,7 +365,8 @@ def unite_stats(result_root, delete = false)
   begin
     __matrix = unite_to(stats, __result_root, 100, delete)
     check_warn_test_error __matrix, result_root
-  rescue StandardError
+  rescue StandardError => e
+    log_warn e.formatted_headline
   end
 
   true

@@ -5,19 +5,23 @@
 . $LKP_SRC/lib/qemu.sh
 . $LKP_SRC/lib/unit.sh
 . $LKP_SRC/lib/job-init.sh
+. $LKP_SRC/lib/lkp_cmd.sh
 
 script_name=$(basename $0)
+
+[ -n "$SUDO_USER" ] && HOME=$(eval echo ~$SUDO_USER)
 
 usage()
 {
 	cat <<EOF
-Usage: lkp $script_name [-o RESULT_ROOT] [-p VDISK_PATH] [-s SSH_PORT] [-k bzImage] [-e] job.sh
+Usage: lkp $script_name [-o RESULT_ROOT] [-p VDISK_PATH] [-s SSH_PORT] [-k bzImage] [-m modules.cgz] [-e] job.sh
 
 options:
 	-o  RESULT_ROOT		 	dir for storing all results
 	-s  SSH_PORT		 	forward ssh port to host
 	-p  VDISK_PATH			specify vdisk path
 	-k  bzImage			specify bzImage as kernel image
+	-m  modules.cgz			specify kernel modules
 	-e				use external network (download from github)
 
 Note:
@@ -28,6 +32,25 @@ and  generates lkp-initrd locally and creates job-initrd with 'job.sh'  you spec
 You can check test results in dir '/tmp/vm_test_result/' or a RESULT_ROOT you specified.
 EOF
 	exit 1
+}
+
+get_job_env()
+{
+	[[ $1 ]] || return
+	[[ $2 ]] || return
+	job_script=$(realpath $1) env=$2 bash -c 'source $job_script && export_top_env > /dev/null 2>&1 && eval echo \$$env'
+}
+
+validate_options()
+{
+	local job_script=$1
+	local need_module
+	need_module="$(get_job_env $job_script 'need_modules')" || return
+	[[ "$need_module" = "true" ]] && {
+		[[ ! $opt_modules ]] && echo "kernel module is required, please specify it with '-m'" && return 1
+	}
+
+	return 0
 }
 
 create_lkp_home()
@@ -160,13 +183,14 @@ setup_vdisk_root()
 	fi
 }
 
-while getopts "o:p:s:k:e" opt
+while getopts "o:p:s:k:m:e" opt
 do
 	case $opt in
 		o ) opt_result_root="$OPTARG" ;;
 		s ) opt_ssh="$OPTARG" ;;
 		p ) opt_vdiskpath="$OPTARG" ;;
 		k ) opt_kernel_image="$OPTARG" ;;
+		m ) opt_modules="$OPTARG" ;;
 		e ) HTTP_PREFIX=https://github.com/0day-ci/lkp-qemu/raw/master ;;
 		? ) usage ;;
 	esac
@@ -181,14 +205,23 @@ job_script=$1
 [ -n "$job_script" ] || usage
 
 sed -i 's/\r//' $job_script
+sed -i 's/LKP_SERVER=.*$/LKP_LOCAL_RUN=1/g' $job_script
 
+validate_options $job_script || exit 1
+
+create_lkp_user
 create_lkp_home
 export CACHE_DIR=$HOME/.lkp/cache
 
 replace_script_partition_val $job_script
 . $job_script export_top_env
 
-[[ $opt_kernel_image ]] && unset modules_initrd
+if [[ $opt_modules ]]; then
+	modules_initrd=$opt_modules
+	ln -sf "$(realpath $opt_modules)" $CACHE_DIR/$(basename $opt_modules)
+else
+	unset modules_initrd # modules_initrd has existed in job.sh, need to flush it
+fi
 
 create_lkp_src_initrd()
 {
@@ -265,8 +298,17 @@ run_kvm()
 {
 	trap - EXIT
 
+	local job_script=$1
 	local mem_mb="$(max_sane_qemu_memory $memory)"
 	local mount_tag=9p/virtfs_mount
+	local need_mem
+	need_mem="$(get_job_env $job_script 'need_memory')" || return
+	[[ "$need_mem" != "" ]] && {
+		local need_mem_mb="$(to_mb $need_mem)"
+		local testsuite
+		testsuite="$(get_job_env $job_script 'suite')" || return
+		[[ "$need_mem_mb" -gt "${mem_mb: : -1}" ]] && echo "Warning: test suite $testsuite needs memory: ${need_mem_mb}Mb, actual memory: ${mem_mb: : -1}Mb"
+	}
 	model='qemu-system-x86_64 -enable-kvm'
 	netdev_option="-device e1000,netdev=net0 "
 	netdev_option+="-netdev user,id=net0"
@@ -294,4 +336,4 @@ setup_qemu_console
 setup_qemu_netdev
 setup_vdisk_root
 setup_qemu_drives
-run_kvm
+run_kvm $job_script

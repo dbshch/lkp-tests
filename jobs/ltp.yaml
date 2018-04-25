@@ -2,6 +2,8 @@ suite: ltp
 testcase: ltp
 category: functional
 
+need_modules: true
+
 ltp:
   test:
   - admin_tools-00
@@ -14,7 +16,6 @@ ltp:
   - cpuhotplug
   - crashme-00
   - crashme-01
-  - crashme-02
 # kernel bug, will nerver be success. please see https://github.com/linux-test-project/ltp/issues/63
 #  - dma_thread_diotest
   - fcntl-locktests
@@ -76,3 +77,8 @@ ltp:
 #  - syscalls-ipc
 #  - tracing
 
+---
+reboot_for_next_job: 1
+ltp:
+  test:
+  - crashme-02

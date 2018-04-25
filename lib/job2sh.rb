@@ -8,10 +8,10 @@ require 'shellwords'
 TMP ||= ENV['TMP'] || '/tmp'
 
 SHELL_BLOCK_KEYWORDS = {
-  'if' => ['then', 'fi'],
-  'for' => ['do', 'done'],
-  'while' => ['do', 'done'],
-  'until' => ['do', 'done'],
+  'if' => %w[then fi],
+  'for' => %w[do done],
+  'while' => %w[do done],
+  'until' => %w[do done],
   'function' => ['{', '}']
 }.freeze
 
@@ -64,7 +64,7 @@ def get_program_env(_program, env)
     end
   end
 
-  return program_env, args
+  [program_env, args]
 end
 
 class Job2sh < Job

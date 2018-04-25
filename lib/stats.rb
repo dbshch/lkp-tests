@@ -205,7 +205,7 @@ end
 
 def load_release_matrix(matrix_file)
   load_json matrix_file
-rescue => e
+rescue StandardError => e
   log_exception e, binding
   nil
 end
@@ -242,7 +242,7 @@ def load_base_matrix(matrix_path, head_matrix, options)
     log_debug "remote is #{remote}"
     $git[project] ||= Git.open(project: project, remote: remote)
     git = $git[project]
-  rescue => e
+  rescue StandardError => e
     log_exception e, binding
     return nil
   end
@@ -506,13 +506,13 @@ def __get_changed_stats(a, b, is_incomplete_run, options)
     if mean_a > mean_b
       y = min_a - max_b
       delta = mean_a - mean_b
-      ratio = mean_a.to_f / mean_b if mean_b > 0
+      ratio = mean_a.to_f / mean_b if mean_b.positive?
     else
       y = min_b - max_a
       delta = mean_b - mean_a
-      ratio = mean_b.to_f / mean_a if mean_a > 0
+      ratio = mean_b.to_f / mean_a if mean_a.positive?
     end
-    y = 0 if y < 0
+    y = 0 if y.negative?
     ratio = MAX_RATIO if ratio > MAX_RATIO
 
     unless options['perf-profile'] && k =~ /^perf-profile\./
@@ -559,7 +559,7 @@ def load_matrices_to_compare(matrix_path1, matrix_path2, options = {})
           search_load_json matrix_path2
         else
           load_base_matrix matrix_path1, a, options
-         end
+        end
   rescue StandardError => e
     log_exception(e, binding)
     return [nil, nil]
@@ -679,7 +679,7 @@ end
 def kpi_stat_direction(stat_name, stat_change_percentage)
   change_direction = 'improvement'
 
-  if $index_perf[stat_name] && $index_perf[stat_name] * stat_change_percentage < 0
+  if $index_perf[stat_name] && ($index_perf[stat_name] * stat_change_percentage).negative?
     change_direction = 'regression'
   end
   change_direction
